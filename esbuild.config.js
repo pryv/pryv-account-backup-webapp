@@ -2,9 +2,16 @@
 const esbuild = require('esbuild');
 const path = require('path');
 const fs = require('fs');
+const { spawn } = require('child_process');
 
 const isWatch = process.argv.includes('--watch');
 const isServe = process.argv.includes('--serve');
+
+// Dev-server URL (per workspace convention) — must be served via backloop.dev
+// rather than bare localhost so the browser can hit remote HTTPS Pryv APIs
+// without mixed-content / CORS pre-flight failures.
+const SERVE_SUBDOMAIN = process.env.BACKLOOP_SUBDOMAIN || 'backup';
+const SERVE_PORT = parseInt(process.env.BACKLOOP_PORT || '4443', 10);
 
 const nodeStub = path.resolve(__dirname, 'src/lib/node-stub.js');
 
@@ -20,17 +27,17 @@ const buildOptions = {
   loader: { '.css': 'text' },
   // Stub Node built-ins that the Node-only branches of `pryv` (lib-js) and
   // `@pryv/account-backup` require at parse time but never call from a
-  // browser-side backup. Replaces fs/path/https/JSONStream/async with an
-  // empty object module; the webapp's hot path uses fetch + writer + fflate.
+  // browser-side backup. Replaces fs/path/https with an empty object module;
+  // the webapp's hot path uses fetch + writer + fflate. `async` is a pure-JS
+  // npm package — bundled, not stubbed (mapLimit is called by the
+  // attachments / hf-data / webhooks drainers).
   alias: {
     fs: nodeStub,
     path: nodeStub,
     https: nodeStub,
     http: nodeStub,
     crypto: nodeStub,
-    stream: nodeStub,
-    JSONStream: nodeStub,
-    async: nodeStub
+    stream: nodeStub
   },
   define: {
     'process.env.NODE_ENV': isWatch || isServe ? '"development"' : '"production"'
@@ -48,17 +55,32 @@ async function copyStatics () {
   }
 }
 
+function spawnBackloopStatic (distDir, port) {
+  // The `backloop.dev` package's exports field restricts subpath access, so
+  // we go through npm's bin shim rather than require.resolve. `npm exec`
+  // works for both local + global installs.
+  const cliPath = path.resolve(__dirname, 'node_modules/.bin/backloop.dev');
+  const child = spawn(cliPath, [distDir, String(port)], {
+    stdio: 'inherit',
+    shell: false
+  });
+  child.on('exit', (code) => {
+    if (code != null && code !== 0) {
+      console.error('backloop.dev exited with code ' + code);
+      process.exit(code);
+    }
+  });
+  return child;
+}
+
 (async () => {
   if (isServe) {
     const ctx = await esbuild.context(buildOptions);
     await ctx.watch();
     await copyStatics();
-    const { host, port } = await ctx.serve({
-      servedir: path.resolve(__dirname, 'dist'),
-      host: '127.0.0.1',
-      port: 8080
-    });
-    console.log('Webapp serving on http://' + host + ':' + port);
+    const distDir = path.resolve(__dirname, 'dist');
+    spawnBackloopStatic(distDir, SERVE_PORT);
+    console.log('Webapp dev URL: https://' + SERVE_SUBDOMAIN + '.backloop.dev:' + SERVE_PORT + '/');
   } else if (isWatch) {
     const ctx = await esbuild.context(buildOptions);
     await ctx.watch();

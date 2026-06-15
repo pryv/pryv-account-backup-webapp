@@ -4,9 +4,9 @@ Sample browser-based Pryv account backup web app — companion to [`@pryv/accoun
 
 ## What this is
 
-A minimal reference UI for the subject side of a Pryv DSAR (Data Subject Access Request) flow. The webapp does not implement the backup logic itself — it uses the browser-isomorphic resource fetchers exported by [`@pryv/account-backup`](https://github.com/pryv/pryv-account-backup) (`api-resources`, `events-chunked`, `audit-as-events`, `accesses-history`).
+A minimal reference UI for the subject side of a Pryv DSAR (Data Subject Access Request) flow. The webapp does not implement the backup logic itself — it uses the browser-isomorphic resource fetchers exported by [`@pryv/account-backup`](https://github.com/pryv/pryv-account-backup) (`api-resources`, `events-chunked`, `audit-as-events`, `accesses-history`, `attachments`, `hf-data`, `webhooks-export`).
 
-Implementers are expected to fork and rebrand. Total runtime size is ~150 LOC of vanilla JS + one CSS file; no framework, no build templating beyond esbuild's bundle step.
+Implementers are expected to fork and rebrand. Total runtime size is ~350 LOC of vanilla JS + one CSS file; no framework, no build templating beyond esbuild's bundle step.
 
 ## What's in the bundle
 
@@ -17,16 +17,23 @@ Each backup run produces a series of ZIP files (default 100 MB each; configurabl
 - `audit_logs.json` (fetched via the standard events API on the `:_audit:*` store streams)
 - `app_profiles/profile_app_<accessId>.json` (one per `app`-type access)
 - `accesses-history/<accessId>.json` (opt-in via the Advanced section)
+- `attachments/<eventId>_<fileName>` (opt-in via the Advanced section) — binary streams
+- `hf-data/<eventId>.json` (one per `series:*` event, opt-out via the Advanced section) — HFS data points
+- `webhooks.json` (opt-out via the Advanced section) — aggregated by `accessId`
+- `sync-state.json` (always written) — portable kv state to drive cross-session incremental on the next visit
 - `backup-index.json` (in the **last** ZIP — cross-ZIP file directory; restore reads this to learn which ZIP carries which file)
 
 **Not included by the webapp** (use the CLI flavor for these):
 
-- File attachments (binary streams)
-- High-frequency series data points (`hf-data/`)
-- Webhooks per access
-- Per-file sha256 integrity manifest
+- Per-file sha256 integrity manifest (`manifest.json`) — the auditor's tamper-evidence story is CLI-only
 
-The webapp focuses on the read-side text resources; CLI handles binary streaming.
+## Cross-session incremental — the `sync-state.json` upload
+
+`localStorage` carries the operational store during a run (kv + per-category work refs). After a clean run, the orchestrator exports a portable `sync-state.json` (kv state only) into the final ZIP. The subject keeps it alongside the ZIPs.
+
+**On the next visit:** the pre-login UI scans `localStorage` for prior states and displays a status panel — Tool version, Last run at, Events fetched up to, Audit fetched up to, Pending refs (carry-over from an interrupted prior run; re-discovered automatically) + a **Reset** button per saved state. The subject can also upload their previously downloaded `sync-state.json` via the **Resume from a prior sync-state.json (optional)** file picker — useful when localStorage was cleared, a different browser is used, or the run is being performed from a different device. The orchestrator imports the kv state at login; the next run issues a single `events?modifiedSince=…` round-trip instead of the full chunked refetch.
+
+Full schema: see [`docs/sync-state.md`](https://github.com/pryv/pryv-account-backup/blob/master/docs/sync-state.md) in the library repo.
 
 ## Deploy
 
@@ -39,13 +46,15 @@ npm install
 npm run build       # produces dist/
 ```
 
-Serve `dist/` from any static HTTP server **on the same origin as the Pryv API** (or with CORS configured). For local development:
+Serve `dist/` from any static HTTPS server **on the same origin as the Pryv API** (or with CORS configured). For production, copy `dist/` to your web server's document root. The webapp is fully static; no backend required.
+
+### Local development — `backloop.dev` (HTTPS on localhost)
 
 ```bash
-npm run serve       # esbuild dev server at http://127.0.0.1:8080
+npm run serve       # https://backup.backloop.dev:4443/
 ```
 
-For production, copy `dist/` to your web server's document root. The webapp is fully static; no backend required.
+The dev server is fronted by [`backloop.dev`](https://npm.im/backloop.dev) — any `*.backloop.dev` subdomain resolves to localhost over HTTPS with a real signed certificate. This is required because the webapp talks to remote HTTPS Pryv APIs (`reg.pryv.me`, operator-hosted cores); browsers block mixed-content from an `http://localhost` page, and CORS preflight from a non-HTTPS origin fails. The dev URL prefix is configurable via `BACKLOOP_SUBDOMAIN` + `BACKLOOP_PORT` env vars.
 
 ## Security model
 
@@ -59,11 +68,11 @@ The webapp does **not** handle MFA challenges. If a subject has MFA enabled, poi
 
 The whole UI is in `src/`:
 
-- `index.html` — three screens (login / progress / done) + an error screen
+- `index.html` — four screens (login + state panel / progress / done / error)
 - `style.css` — minimal styling; rebrand by editing the CSS custom properties at the top
-- `src/app.js` — orchestrator + UI controller (~250 LOC)
-- `src/lib/LocalStorageStateStore.js` — incremental-state adapter (matches `FolderStateStore` in the CLI library)
-- `src/lib/BrowserBlobZipStorageWriter.js` — accumulates files into in-memory ZIPs, downloads via `<a download>`
+- `src/app.js` — orchestrator + UI controller (~350 LOC)
+- `src/lib/LocalStorageStateStore.js` — operational store (kv state + per-category work refs + portable export/import) matching `FolderStateStore` in the CLI library
+- `src/lib/BrowserBlobZipStorageWriter.js` — accumulates files into in-memory ZIPs, downloads via `<a download>` at the configured threshold
 
 ## License
 

@@ -14,6 +14,8 @@
     </header>
 
     <section id="screen-login" class="screen">
+      <div id="state-panel" class="state-panel"></div>
+
       <form id="login-form">
         <label>
           Service info URL
@@ -29,6 +31,10 @@
           Password
           <input type="password" id="password" required autocomplete="current-password" />
         </label>
+        <label>
+          Resume from a prior sync-state.json (optional)
+          <input type="file" id="sync-state-upload" accept="application/json,.json" />
+        </label>
         <details>
           <summary>Advanced</summary>
           <label>
@@ -39,6 +45,18 @@
           <label class="checkbox">
             <input type="checkbox" id="includeTrashed" />
             Include trashed data
+          </label>
+          <label class="checkbox">
+            <input type="checkbox" id="includeAttachments" />
+            Include attachments
+          </label>
+          <label class="checkbox">
+            <input type="checkbox" id="includeHfData" checked />
+            Include HFS series data points
+          </label>
+          <label class="checkbox">
+            <input type="checkbox" id="includeWebhooks" checked />
+            Include webhooks
           </label>
           <label class="checkbox">
             <input type="checkbox" id="includeAccessHistory" />
@@ -57,7 +75,12 @@
 
     <section id="screen-done" class="screen hidden">
       <h2>Backup complete</h2>
-      <p>Your data has been downloaded. Save the ZIP files together — restore reads them as one bundle.</p>
+      <p>
+        Your data has been downloaded. Save the ZIP files together — restore
+        reads them as one bundle. The last ZIP includes
+        <code>sync-state.json</code>; keep it alongside the others and upload
+        it next time you visit this page to make the next backup incremental.
+      </p>
       <ul id="downloads-list"></ul>
       <button id="reset-button">Start a new backup</button>
     </section>
