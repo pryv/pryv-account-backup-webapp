@@ -10,7 +10,7 @@ The webapp consumes the **browser-isomorphic** per-method modules from `@pryv/ac
 
 - `api-resources` — generic JSON resource → writer pipeline
 - `events-chunked` — events with monthly chunks OR incremental `modifiedSince`
-- `audit-as-events` — audit fetched via `events.get` on `:_audit:*` streams (the dedicated `/audit/logs` endpoint is being removed from open-pryv.io)
+- `audit-as-events` — audit fetched via `events.get` on `:_audit:*` streams (the dedicated `/audit/logs` endpoint was **removed** from open-pryv.io on 2026-06-15 at commit `19d1c11f`; v0.5.0 and earlier of `pryv-account-backup` are now production-broken for the audit-log section against any deployment running that build)
 - `accesses-history` — opt-in per-access version history
 
 It does NOT consume `attachments`, `hf-data`, `webhooks-export`, `manifest` from the library — those stay Node-only in v0.6.0. The webapp's coverage is the **read-side text resources** + their incremental story.
