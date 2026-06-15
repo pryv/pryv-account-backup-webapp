@@ -15,7 +15,7 @@
   "dependencies": {
     "fflate": "^0.8.2",
     "pryv": "^3.4.1",
-    "pryv-account-backup": "github:pryv/pryv-account-backup#feature/lib-isomorphism"
+    "pryv-account-backup": "github:pryv/pryv-account-backup#master"
   },
   "devDependencies": {
     "esbuild": "^0.28.1"
