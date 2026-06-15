@@ -1,0 +1,28 @@
+{
+  "name": "pryv-account-backup-webapp",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Sample browser-based Pryv account backup web app. Operator-hosted; subject logs in + downloads ZIPs. Companion to @pryv/account-backup (CLI + library).",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/pryv/pryv-account-backup-webapp"
+  },
+  "scripts": {
+    "build": "node esbuild.config.js",
+    "build:watch": "node esbuild.config.js --watch",
+    "serve": "node esbuild.config.js --serve"
+  },
+  "dependencies": {
+    "fflate": "^0.8.2",
+    "pryv": "^3.4.1",
+    "pryv-account-backup": "github:pryv/pryv-account-backup#feature/lib-isomorphism"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.1"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "license": "BSD-3-Clause",
+  "author": "Pryv"
+}
