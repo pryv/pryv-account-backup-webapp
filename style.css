@@ -1,0 +1,135 @@
+/* Minimal sample stylesheet. Operators are expected to fork + rebrand. */
+
+:root {
+  --c-bg: #f7f7f9;
+  --c-fg: #1a1a1c;
+  --c-muted: #6c6c72;
+  --c-accent: #2563eb;
+  --c-accent-fg: #ffffff;
+  --c-border: #d4d4d8;
+  --c-error: #b91c1c;
+  --c-success: #15803d;
+  --r: 6px;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+body {
+  font: 16px/1.5 system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  background: var(--c-bg);
+  color: var(--c-fg);
+}
+
+main {
+  max-width: 640px;
+  margin: 2.5rem auto;
+  padding: 2rem;
+  background: #fff;
+  border-radius: var(--r);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+}
+
+header { margin-bottom: 1.5rem; }
+h1 { margin: 0 0 0.25rem; font-size: 1.75rem; }
+.subtitle { margin: 0; color: var(--c-muted); }
+
+.screen.hidden { display: none; }
+
+label {
+  display: block;
+  margin: 0.75rem 0;
+  font-size: 0.95rem;
+  color: var(--c-muted);
+}
+label.checkbox {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--c-fg);
+}
+label input[type="text"],
+label input[type="url"],
+label input[type="password"] {
+  display: block;
+  width: 100%;
+  margin-top: 0.25rem;
+  padding: 0.55rem 0.75rem;
+  border: 1px solid var(--c-border);
+  border-radius: var(--r);
+  font: inherit;
+}
+label input[type="range"] {
+  display: block;
+  width: 100%;
+  margin-top: 0.5rem;
+}
+output { font-weight: 600; color: var(--c-fg); }
+
+details { margin: 1rem 0; }
+details summary {
+  cursor: pointer;
+  font-size: 0.95rem;
+  color: var(--c-muted);
+}
+
+button {
+  display: block;
+  width: 100%;
+  margin-top: 1rem;
+  padding: 0.75rem 1rem;
+  background: var(--c-accent);
+  color: var(--c-accent-fg);
+  border: 0;
+  border-radius: var(--r);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+button:hover { filter: brightness(1.05); }
+button:disabled { opacity: 0.5; cursor: progress; }
+
+#progress-bar {
+  height: 8px;
+  background: var(--c-border);
+  border-radius: var(--r);
+  overflow: hidden;
+  margin: 1rem 0;
+}
+#progress-bar-fill {
+  height: 100%;
+  width: 0;
+  background: var(--c-accent);
+  transition: width 0.25s ease;
+}
+#progress-status { margin: 0.5rem 0; color: var(--c-muted); }
+#progress-resources, #downloads-list {
+  list-style: none;
+  padding: 0;
+  margin: 1rem 0;
+  font-size: 0.9rem;
+}
+#progress-resources li, #downloads-list li {
+  padding: 0.4rem 0;
+  border-bottom: 1px solid var(--c-border);
+}
+#progress-resources li.done::before { content: "✓ "; color: var(--c-success); }
+#progress-resources li.active::before { content: "• "; color: var(--c-accent); }
+#downloads-list li::before { content: "↓ "; color: var(--c-success); }
+
+footer {
+  margin-top: 2.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--c-border);
+  font-size: 0.85rem;
+  color: var(--c-muted);
+}
+footer p { margin: 0.5rem 0; }
+footer a { color: var(--c-accent); }
+
+#error-message {
+  padding: 1rem;
+  background: #fee2e2;
+  color: var(--c-error);
+  border-radius: var(--r);
+  font-size: 0.95rem;
+}

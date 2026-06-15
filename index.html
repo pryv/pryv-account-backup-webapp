@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Account backup</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <main>
+    <header>
+      <h1>Account backup</h1>
+      <p class="subtitle">Download a portable copy of your account data.</p>
+    </header>
+
+    <section id="screen-login" class="screen">
+      <form id="login-form">
+        <label>
+          Service info URL
+          <input type="url" id="serviceInfoUrl" required
+            placeholder="https://reg.example.com/service/info" />
+        </label>
+        <label>
+          Username
+          <input type="text" id="username" required autocomplete="username" />
+        </label>
+        <label>
+          Password
+          <input type="password" id="password" required autocomplete="current-password" />
+        </label>
+        <details>
+          <summary>Advanced</summary>
+          <label>
+            ZIP size (MB)
+            <input type="range" id="zipSizeMb" min="50" max="2048" step="50" value="100" />
+            <output id="zipSizeMbValue">100</output> MB per file
+          </label>
+          <label class="checkbox">
+            <input type="checkbox" id="includeTrashed" />
+            Include trashed data
+          </label>
+          <label class="checkbox">
+            <input type="checkbox" id="includeAccessHistory" />
+            Include per-access version history (O(N) calls)
+          </label>
+        </details>
+        <button type="submit">Start backup</button>
+      </form>
+    </section>
+
+    <section id="screen-progress" class="screen hidden">
+      <div id="progress-bar"><div id="progress-bar-fill"></div></div>
+      <p id="progress-status">Connecting…</p>
+      <ul id="progress-resources"></ul>
+    </section>
+
+    <section id="screen-done" class="screen hidden">
+      <h2>Backup complete</h2>
+      <p>Your data has been downloaded. Save the ZIP files together — restore reads them as one bundle.</p>
+      <ul id="downloads-list"></ul>
+      <button id="reset-button">Start a new backup</button>
+    </section>
+
+    <section id="screen-error" class="screen hidden">
+      <h2>Something went wrong</h2>
+      <p id="error-message"></p>
+      <button id="error-reset-button">Try again</button>
+    </section>
+
+    <footer>
+      <p>
+        <strong>Operator security note:</strong> the backup contains your account
+        data including MFA recovery codes. Treat the downloaded files as
+        sensitive — transport securely; consider rotating recovery codes
+        after disclosure.
+      </p>
+      <p>
+        <strong>MFA accounts:</strong> if your account has SMS multi-factor
+        authentication enabled, use the
+        <a href="https://github.com/pryv/pryv-account-backup">CLI version</a>
+        of the backup tool — this webapp does not handle MFA challenges.
+      </p>
+    </footer>
+  </main>
+  <script src="app.js"></script>
+</body>
+</html>
