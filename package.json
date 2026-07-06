@@ -16,7 +16,7 @@
     "buffer": "^6.0.3",
     "fflate": "^0.8.2",
     "pryv": "^3.4.1",
-    "pryv-account-backup": "github:pryv/pryv-account-backup#v0.7.0"
+    "pryv-account-backup": "github:pryv/pryv-account-backup#4d0cd7676e914c31dc65eb794d8b59f5d7309773"
   },
   "devDependencies": {
     "backloop.dev": "^3.0.3",
