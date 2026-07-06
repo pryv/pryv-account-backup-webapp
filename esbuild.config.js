@@ -14,6 +14,7 @@ const SERVE_SUBDOMAIN = process.env.BACKLOOP_SUBDOMAIN || 'backup';
 const SERVE_PORT = parseInt(process.env.BACKLOOP_PORT || '4443', 10);
 
 const nodeStub = path.resolve(__dirname, 'src/lib/node-stub.js');
+const bufferShim = path.resolve(__dirname, 'src/lib/buffer-shim.js');
 
 const buildOptions = {
   entryPoints: [path.resolve(__dirname, 'src/app.js')],
@@ -25,6 +26,10 @@ const buildOptions = {
   sourcemap: true,
   minify: !isWatch && !isServe,
   loader: { '.css': 'text' },
+  // A bundled transitive dep (jsonparse via JSONStream, pulled by the pryv
+  // lib) touches Node's `Buffer` at module-init; browser esbuild doesn't
+  // provide it, so without this shim the whole bundle throws on load.
+  inject: [bufferShim],
   // Stub Node built-ins that the Node-only branches of `pryv` (lib-js) and
   // `@pryv/account-backup` require at parse time but never call from a
   // browser-side backup. Replaces fs/path/https with an empty object module;
