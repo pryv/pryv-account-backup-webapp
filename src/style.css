@@ -208,3 +208,12 @@ label input[type="file"] {
   font: inherit;
   font-size: 0.85rem;
 }
+
+.back-link {
+  display: inline-block;
+  margin-bottom: 0.75rem;
+  font-size: 0.85rem;
+  color: #6b21a8;
+  text-decoration: none;
+}
+.back-link:hover { text-decoration: underline; }

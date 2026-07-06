@@ -473,3 +473,28 @@ function prettyBytes (n) {
 
 // Initial render — show whatever state is in localStorage.
 renderStatePanel();
+
+// ─── Hand-off params ─────────────────────────────────────────────────────
+// A calling app (e.g. the account app's Data-rights "Start export") can open
+// this page with `?pryvServiceInfoUrl=…` to pre-fill the platform, plus
+// `backUrl`/`backLabel` to offer a "← Back" link. No token is passed — the
+// subject authenticates here.
+(function applyHandoffParams () {
+  const p = new URLSearchParams(location.search);
+  const svc = p.get('pryvServiceInfoUrl');
+  if (svc) $('serviceInfoUrl').value = svc;
+
+  const rawBack = p.get('backUrl');
+  const link = $('back-link');
+  if (rawBack && link) {
+    try {
+      const u = new URL(rawBack, location.origin);
+      if (u.protocol === 'https:' || u.protocol === 'http:') {
+        const label = (p.get('backLabel') || '').trim();
+        link.href = u.toString();
+        link.textContent = '← Back' + (label ? ' to ' + label : '') + ' (' + u.host + ')';
+        link.hidden = false;
+      }
+    } catch { /* invalid backUrl — leave the link hidden */ }
+  }
+})();
