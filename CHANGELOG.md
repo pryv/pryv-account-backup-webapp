@@ -20,6 +20,10 @@ Closes the v0.1.0 coverage gap. The webapp now offers feature parity with the CL
 
 - **`pryv-account-backup` dep pinned to v0.7.0** (was `master`). The new ref-tracking + portable export/import contract requires the library-side extension.
 - **`package.json` `version` bumped to `0.2.0`**.
+- **`pryv-account-backup` dep pinned to v0.8.0** (was v0.7.1), to stay on the current library tag.
+  No functional change for the webapp: the modules it imports (`src/methods/*`) only gained license
+  headers; the library's other changes are in restore, the CLI scripts and Node-side directory
+  handling, none of which the webapp uses.
 
 ### Compatibility
 
