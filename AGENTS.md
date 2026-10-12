@@ -6,10 +6,11 @@ This repo is a **sample webapp** consumed by implementers who fork + rebrand. It
 
 A static site (HTML + CSS + JS) bundled by esbuild. Four screens: login (+ pre-login state panel) → progress → done → error. Vanilla JS — no framework. The orchestrator in `src/app.js` is ~350 LOC; the two adapters in `src/lib/` are <150 LOC each.
 
-The webapp consumes the **browser-isomorphic** per-method modules from `@pryv/account-backup` v0.7.0+:
+The webapp consumes the **browser-isomorphic** per-method modules from `@pryv/account-backup` (pinned to v0.8.1; `events-pager` needs v0.8.1+):
 
 - `api-resources` — generic JSON resource → writer pipeline; supports an opt-in `onParsed(doc)` tee for ref extraction
 - `events-chunked` — events with monthly chunks OR incremental `modifiedSince`; supports an `onEvents(events[])` lift wired to push attachment + series-event refs into the StateStore
+- `events-pager` — `serverTime(connection)`, used for the run's timestamp (the paged reads themselves run inside `events-chunked` / `audit-as-events`)
 - `audit-as-events` — audit fetched via `events.get` on `:_audit:*` streams (the dedicated `/audit/logs` endpoint was **removed** from open-pryv.io on 2026-06-15 at commit `19d1c11f`; v0.5.0 and earlier of `pryv-account-backup` are now production-broken for the audit-log section against any deployment running that build)
 - `accesses-history` — opt-in per-access version history (in-memory accesses array)
 - `attachments` — drains the `attachment` category from the StateStore; binary stream pipe to the writer
@@ -24,18 +25,18 @@ It does NOT consume `manifest` from the library — sha256 tamper-evidence stays
 2. Subject submits username + password to the login form.
 3. `pryv.Service.login` returns a personal token + apiEndpoint.
 4. Orchestrator applies pre-login choices in order: forget → upload-import → defaults. Constructs `LocalStorageStateStore` (key namespaced by apiEndpoint) + `BrowserBlobZipStorageWriter` (configurable ZIP size, default 100 MB).
-5. Orchestrator reads prior state's `lastRunAt` / `events.lastModifiedSince` / `audit.lastModifiedSince`. Falls back to initial-fetch mode when state is absent.
+5. Orchestrator takes this run's timestamp (`runStartedAt`) from the server clock: `meta.serverTime` of an `access-info` call through the library's `events-pager.serverTime`, before any data is read; it falls back to the device clock with an on-screen note and a console warning when that call fails or carries no server time. It then reads prior state's `lastRunAt` / `events.lastModifiedSince` / `audit.lastModifiedSince`, and falls back to initial-fetch mode when state is absent.
 6. **Stale-refs clear** — at run-start, all three ref categories (`attachment`, `series-event`, `webhook`) are cleared from the store; the streams below re-discover anything still relevant via `modifiedSince`.
 7. Per-resource sequence — each step calls the library module with `connection + writer + state + options`:
    - **metadata** — `account`, `streams`, `accesses` (with `onParsed` tee → pushes `webhook` refs), `accesses-all`, `profile/private`, `profile/public`
-   - **audit-as-events** — single incremental call
-   - **events** — chunked (initial) or single incremental call; `onEvents` lift pushes `attachment` + `series-event` refs as parsed
+   - **audit-as-events** — the whole audit log (initial run, `audit_logs.json`) or the audit rows changed since the threshold (`audit_logs-incremental-<runStartedAt>.json`), read in explicit pages by the library
+   - **events** — chunked (initial) or incremental: every event changed since the threshold (trashed ones included) plus every deletion, read in explicit pages and written to `events-incremental-<runStartedAt>.json`; `onEvents` lift pushes `attachment` + `series-event` refs as parsed
    - **app-profiles** — per `app`-type access from the captured accesses array
    - **access-history** — opt-in; one fetch per access
    - **attachments drain** — `attachments.download(connection, writer, state, ...)` drains the `attachment` category
    - **hf-data drain** — `hf-data.download(...)` drains `series-event`
    - **webhooks drain** — `webhooks-export.download(...)` drains `webhook`
-8. State store flushes `lastRunAt` + per-resource thresholds + tool/format version.
+8. State store flushes `lastRunAt` + per-resource thresholds (all set to `runStartedAt`, i.e. the server clock) + tool/format version.
 9. Orchestrator calls `state.export()` and writes the result to `sync-state.json` via the writer — this is the portable artefact the subject keeps to drive the next cross-session incremental.
 10. `writer.finalizeBatch()` emits the last ZIP (which includes both `backup-index.json` and `sync-state.json`).
 

@@ -24,6 +24,17 @@ Closes the v0.1.0 coverage gap. The webapp now offers feature parity with the CL
   No functional change for the webapp: the modules it imports (`src/methods/*`) only gained license
   headers; the library's other changes are in restore, the CLI scripts and Node-side directory
   handling, none of which the webapp uses.
+- **`pryv-account-backup` dep pinned to v0.8.1** (was v0.8.0). The library's fixes reach the
+  webapp through the modules it calls: incremental runs collect every changed event (trashed ones
+  included) and every deletion instead of stopping at 20, and the audit log is read in full instead
+  of stopping at 20 rows. An incremental run writes its audit rows to
+  `audit_logs-incremental-<TS>.json` instead of `audit_logs.json`.
+- **The incremental threshold comes from the server clock.** The run's timestamp (`lastRunAt`, the
+  next run's `modifiedSince`, and the `<TS>` in the incremental file names) is `meta.serverTime` of
+  an `access-info` call made before any data is read, instead of the device clock: a device clock
+  ahead of the server made the next run skip changes made during the run. When the server time
+  cannot be read, the device clock is used and a note says so on the progress screen. The audit step
+  now gets the same timestamp as the events step, so both incremental files carry the same `<TS>`.
 
 ### Compatibility
 

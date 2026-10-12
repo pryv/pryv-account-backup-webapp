@@ -4,7 +4,7 @@ Sample browser-based Pryv account backup web app — companion to [`@pryv/accoun
 
 ## What this is
 
-A minimal reference UI for the subject side of a Pryv DSAR (Data Subject Access Request) flow. The webapp does not implement the backup logic itself — it uses the browser-isomorphic resource fetchers exported by [`@pryv/account-backup`](https://github.com/pryv/pryv-account-backup) (`api-resources`, `events-chunked`, `audit-as-events`, `accesses-history`, `attachments`, `hf-data`, `webhooks-export`).
+A minimal reference UI for the subject side of a Pryv DSAR (Data Subject Access Request) flow. The webapp does not implement the backup logic itself — it uses the browser-isomorphic resource fetchers exported by [`@pryv/account-backup`](https://github.com/pryv/pryv-account-backup) (`api-resources`, `events-chunked`, `events-pager`, `audit-as-events`, `accesses-history`, `attachments`, `hf-data`, `webhooks-export`).
 
 Implementers are expected to fork and rebrand. Total runtime size is ~350 LOC of vanilla JS + one CSS file; no framework, no build templating beyond esbuild's bundle step.
 
@@ -13,8 +13,10 @@ Implementers are expected to fork and rebrand. Total runtime size is ~350 LOC of
 Each backup run produces a series of ZIP files (default 100 MB each; configurable in the UI). The ZIPs together contain:
 
 - `account.json`, `streams.json`, `accesses.json`, `accesses-all.json` (deletions + expired), `profile_private.json`, `profile_public.json`
-- `events-YYYY-MM.json` (monthly chunks, initial run) OR `events-incremental-<TS>.json` (subsequent runs, only events `modified > lastRun`)
-- `audit_logs.json` (fetched via the standard events API on the `:_audit:*` store streams)
+- `events-YYYY-MM.json` (monthly chunks, initial run) OR `events-incremental-<TS>.json` (subsequent runs: every event `modified > lastRun`, trashed ones included, plus every deletion in `eventDeletions`)
+- `audit_logs.json` (initial run) OR `audit_logs-incremental-<TS>.json` (subsequent runs, only audit rows `modified > lastRun`) — fetched via the standard events API on the `:_audit:*` store streams
+
+`<TS>` and `lastRun` are the server's clock (`meta.serverTime`) at the start of the run, so a device clock that is off does not make the next run skip changes; the device clock is used, with a note on screen, only when the server time cannot be read. Every request is read in explicit pages, so any number of changes is collected.
 - `app_profiles/profile_app_<accessId>.json` (one per `app`-type access)
 - `accesses-history/<accessId>.json` (opt-in via the Advanced section)
 - `attachments/<eventId>_<fileName>` (opt-in via the Advanced section) — binary streams
@@ -31,7 +33,7 @@ Each backup run produces a series of ZIP files (default 100 MB each; configurabl
 
 `localStorage` carries the operational store during a run (kv + per-category work refs). After a clean run, the orchestrator exports a portable `sync-state.json` (kv state only) into the final ZIP. The subject keeps it alongside the ZIPs.
 
-**On the next visit:** the pre-login UI scans `localStorage` for prior states and displays a status panel — Tool version, Last run at, Events fetched up to, Audit fetched up to, Pending refs (carry-over from an interrupted prior run; re-discovered automatically) + a **Reset** button per saved state. The subject can also upload their previously downloaded `sync-state.json` via the **Resume from a prior sync-state.json (optional)** file picker — useful when localStorage was cleared, a different browser is used, or the run is being performed from a different device. The orchestrator imports the kv state at login; the next run issues a single `events?modifiedSince=…` round-trip instead of the full chunked refetch.
+**On the next visit:** the pre-login UI scans `localStorage` for prior states and displays a status panel — Tool version, Last run at, Events fetched up to, Audit fetched up to, Pending refs (carry-over from an interrupted prior run; re-discovered automatically) + a **Reset** button per saved state. The subject can also upload their previously downloaded `sync-state.json` via the **Resume from a prior sync-state.json (optional)** file picker — useful when localStorage was cleared, a different browser is used, or the run is being performed from a different device. The orchestrator imports the kv state at login; the next run fetches only what changed since then (`events?modifiedSince=…`, read in pages) instead of the full chunked refetch.
 
 Full schema: see [`docs/sync-state.md`](https://github.com/pryv/pryv-account-backup/blob/master/docs/sync-state.md) in the library repo.
 

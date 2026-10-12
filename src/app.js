@@ -19,6 +19,7 @@ import * as pryv from 'pryv';
 import apiResources from 'pryv-account-backup/src/methods/api-resources.js';
 import * as eventsChunked from 'pryv-account-backup/src/methods/events-chunked.js';
 import * as auditAsEvents from 'pryv-account-backup/src/methods/audit-as-events.js';
+import * as eventsPager from 'pryv-account-backup/src/methods/events-pager.js';
 import * as accessesHistory from 'pryv-account-backup/src/methods/accesses-history.js';
 import * as attachments from 'pryv-account-backup/src/methods/attachments.js';
 import * as hfData from 'pryv-account-backup/src/methods/hf-data.js';
@@ -248,7 +249,10 @@ async function runBackup (ctx) {
     }
   });
 
-  const runStartedAt = Math.floor(Date.now() / 1000);
+  // The next run's `modifiedSince` threshold, taken from the server's clock
+  // before any data is read (as the library's Backup.run does): a device clock
+  // ahead of the server would otherwise skip changes made during this run.
+  const runStartedAt = await serverRunStartedAt(connection);
   const priorRunAt = await state.get('lastRunAt');
   const eventsModifiedSince = priorRunAt ? await state.get('events.lastModifiedSince') : null;
   const auditModifiedSince = priorRunAt ? await state.get('audit.lastModifiedSince') : null;
@@ -269,7 +273,7 @@ async function runBackup (ctx) {
   await runStep('audit', () => callbackify(
     auditAsEvents.download,
     connection, writer,
-    { includeTrashed: ctx.includeTrashed, modifiedSince: auditModifiedSince }
+    { includeTrashed: ctx.includeTrashed, modifiedSince: auditModifiedSince, runStartedAt: runStartedAt }
   ));
 
   // Step 3 — events with onEvents tee for attachment + series-event refs
@@ -457,6 +461,28 @@ async function runStep (id, fn) {
   $('progress-status').textContent = 'Fetching ' + id + '…';
   await fn();
   markDone(id);
+}
+
+/**
+ * `meta.serverTime` of an `access-info` call, floored; the device clock when
+ * the call fails or carries no server time (said on screen and in the console).
+ */
+async function serverRunStartedAt (connection) {
+  let reason = 'the server sent no meta.serverTime';
+  try {
+    const t = await eventsPager.serverTime(connection);
+    if (t != null) return t;
+  } catch (err) {
+    reason = 'the server clock could not be read (' + (err.message || err) + ')';
+  }
+  const msg = 'Using this device\'s clock for the next incremental threshold: ' + reason + '.';
+  console.warn(msg);
+  // Its own line under the status, which the next steps overwrite.
+  const note = document.createElement('p');
+  note.className = 'clock-note';
+  note.textContent = msg;
+  $('progress-status').after(note);
+  return Math.floor(Date.now() / 1000);
 }
 
 function callbackify (fn, ...args) {
