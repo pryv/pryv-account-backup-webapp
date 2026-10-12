@@ -17,6 +17,7 @@
  */
 import * as pryv from 'pryv';
 import apiResources from 'pryv-account-backup/src/methods/api-resources.js';
+import backupPackage from 'pryv-account-backup/package.json';
 import * as eventsChunked from 'pryv-account-backup/src/methods/events-chunked.js';
 import * as auditAsEvents from 'pryv-account-backup/src/methods/audit-as-events.js';
 import * as eventsPager from 'pryv-account-backup/src/methods/events-pager.js';
@@ -335,7 +336,7 @@ async function runBackup (ctx) {
 
   // Persist thresholds for the next run
   await state.set('formatVersion', LocalStorageStateStore.FORMAT_VERSION);
-  await state.set('toolVersion', '0.7.0');
+  await state.set('toolVersion', backupPackage.version);
   await state.set('lastRunAt', runStartedAt);
   await state.set('events.lastModifiedSince', runStartedAt);
   await state.set('audit.lastModifiedSince', runStartedAt);

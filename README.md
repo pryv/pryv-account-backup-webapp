@@ -15,8 +15,6 @@ Each backup run produces a series of ZIP files (default 100 MB each; configurabl
 - `account.json`, `streams.json`, `accesses.json`, `accesses-all.json` (deletions + expired), `profile_private.json`, `profile_public.json`
 - `events-YYYY-MM.json` (monthly chunks, initial run) OR `events-incremental-<TS>.json` (subsequent runs: every event `modified > lastRun`, trashed ones included, plus every deletion in `eventDeletions`)
 - `audit_logs.json` (initial run) OR `audit_logs-incremental-<TS>.json` (subsequent runs, only audit rows `modified > lastRun`) — fetched via the standard events API on the `:_audit:*` store streams
-
-`<TS>` and `lastRun` are the server's clock (`meta.serverTime`) at the start of the run, so a device clock that is off does not make the next run skip changes; the device clock is used, with a note on screen, only when the server time cannot be read. Every request is read in explicit pages, so any number of changes is collected.
 - `app_profiles/profile_app_<accessId>.json` (one per `app`-type access)
 - `accesses-history/<accessId>.json` (opt-in via the Advanced section)
 - `attachments/<eventId>_<fileName>` (opt-in via the Advanced section) — binary streams
@@ -24,6 +22,8 @@ Each backup run produces a series of ZIP files (default 100 MB each; configurabl
 - `webhooks.json` (opt-out via the Advanced section) — aggregated by `accessId`
 - `sync-state.json` (always written) — portable kv state to drive cross-session incremental on the next visit
 - `backup-index.json` (in the **last** ZIP — cross-ZIP file directory; restore reads this to learn which ZIP carries which file)
+
+`<TS>` and `lastRun` are the server's clock (`meta.serverTime`) at the start of the run, so a device clock that is off does not make the next run skip changes; the device clock is used, with a note on screen, only when the server time cannot be read. Every request is read in explicit pages, so any number of changes is collected.
 
 **Not included by the webapp** (use the CLI flavor for these):
 
