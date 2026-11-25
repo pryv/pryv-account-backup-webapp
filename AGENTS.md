@@ -62,7 +62,7 @@ It does NOT consume `manifest` from the library — sha256 tamper-evidence stays
 
 ## Operator security note
 
-The bundle the webapp produces carries `profile_private.json`, which includes `profile.mfa.recoveryCodes` verbatim when MFA is enabled — these are SMS-bypass tokens. Document this clearly in any operator-facing customisation guide; consider advising the subject to rotate recovery codes after the disclosure.
+The bundle the webapp produces carries `profile_private.json`, with the subject's MFA enrolment as the private-profile read returns it: method, content (for SMS, the phone number), TOTP parameters. No usable MFA secret: since open-pryv.io 2.0.0-rc.27 the read leaves out the encrypted TOTP secret and the recovery-code hashes. Say in any operator-facing customisation guide that the bundle is the subject's whole account: confidential personal data, secure transport, documented destruction.
 
 ## Distribution
 

@@ -64,7 +64,7 @@ The subject's username + password are submitted via the form. `Service.login` (f
 
 The webapp does **not** handle MFA challenges. If a subject has MFA enabled, point them at the CLI version of the backup tool — the CLI inherits MFA handling from lib-js's `Service.login` SMS-challenge flow.
 
-**Operator security note:** the backup bundle includes `profile_private.json`, which carries `profile.mfa.recoveryCodes` (10 SMS-bypass tokens) when MFA is enabled. Treat the downloaded files as sensitive — transport over a secure channel; consider rotating MFA recovery codes after the disclosure is complete. This is by-design (the subject is entitled to their full MFA state) but worth flagging in your subject-facing documentation.
+**Operator security note:** the backup bundle includes `profile_private.json`, which carries the subject's MFA enrolment as the private-profile read returns it: the method, its content (for SMS, the phone number) and the TOTP parameters. It holds no usable MFA secret: since open-pryv.io 2.0.0-rc.27 the read leaves out the encrypted TOTP secret and the recovery-code hashes, so no recovery code needs to be rotated after a disclosure. The bundle is still the subject's whole account: treat it as confidential personal data, transport it over a secure channel and document how it is destroyed.
 
 ## Customising
 
