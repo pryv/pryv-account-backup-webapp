@@ -23,7 +23,7 @@ It does NOT consume `manifest` from the library — sha256 tamper-evidence stays
 
 1. **Pre-login** — UI scans `localStorage` for any `pryv-account-backup:state:<apiEndpoint>` entries and renders a status panel per entry (toolVersion, lastRunAt, events / audit thresholds, pending refs, **Reset** action per saved state). Also exposes a file picker for "Resume from a prior `sync-state.json`" — uploaded files are parsed and held in memory until login completes.
 2. Subject submits username + password to the login form.
-3. `pryv.Service.login` returns a personal token + apiEndpoint.
+3. `pryv.Service.login` returns a personal token + apiEndpoint. For an account with MFA active it throws `MfaRequiredError` instead: the form shows a code field (authenticator app for `method: 'totp'`, SMS otherwise, with a "Send a new code" button calling `Service.mfaChallenge`), and `Service.mfaVerify` returns the connection; a wrong code (`invalid-mfa-code`) can be retyped up to 3 times. Recovery codes are not a sign-in path (they turn MFA off on the account).
 4. Orchestrator applies pre-login choices in order: forget → upload-import → defaults. Constructs `LocalStorageStateStore` (key namespaced by apiEndpoint) + `BrowserBlobZipStorageWriter` (configurable ZIP size, default 100 MB).
 5. Orchestrator takes this run's timestamp (`runStartedAt`) from the server clock: `meta.serverTime` of an `access-info` call through the library's `events-pager.serverTime`, before any data is read; it falls back to the device clock with an on-screen note and a console warning when that call fails or carries no server time. It then reads prior state's `lastRunAt` / `events.lastModifiedSince` / `audit.lastModifiedSince`, and falls back to initial-fetch mode when state is absent.
 6. **Stale-refs clear** — at run-start, all three ref categories (`attachment`, `series-event`, `webhook`) are cleared from the store; the streams below re-discover anything still relevant via `modifiedSince`.
@@ -45,14 +45,14 @@ It does NOT consume `manifest` from the library — sha256 tamper-evidence stays
 - **Adding backend code.** This is a static site by design. If the orchestration needs server-side help (job queue, signed URL, etc.), open an issue or escalate to the operator — do not add an Express/Node server.
 - **Pulling in a UI framework.** Vanilla JS + vanilla CSS is intentional. Vue / React / Alpine etc. add fork cost.
 - **Adding the sha256 manifest.** `manifest.js` stays Node-only — the webapp's lack of a manifest is a deliberate trade-off (the subject answering their own DSAR doesn't need third-party-auditor tamper-evidence; the ZIPs are signed by the operator's TLS already).
-- **Touching MFA handling beyond the current "use the CLI" error.** The independent-MFA-webpage direction is a separate effort; do not improvise it here.
+- **Accepting a recovery code at sign-in.** The login form takes the TOTP / SMS code only; a recovery code turns MFA off on the account and belongs to the account's own recovery flow, not to this webapp.
 - **Dropping `backloop.dev` from the dev server.** Bare `localhost` breaks the moment the webapp talks to remote HTTPS APIs (mixed-content + CORS preflight). Keep the `backloop.dev` front-end in `esbuild.config.js`.
 
 ## Build + test cadence
 
-- `npm install && npm run build` should always succeed (verified by hand; CI not wired yet).
+- `npm install && npm run build` and `npm test` should always succeed (CI not wired yet).
 - `npm run serve` opens a `backloop.dev` static server at `https://backup.backloop.dev:4443/` (HTTPS, signed cert, proxies to localhost).
-- No unit tests in this repo; the contract is enforced by the `[PALI]` suite in `pryv-account-backup`. Integration verification happens against a real Pryv lab instance — operator drives the lab smoke test.
+- `npm test` builds the bundle and runs `test/mfa-smoke.js`: the built `dist/app.js` in a Node `vm` with a minimal fake DOM and a mocked `fetch` (no network), driving the login form through the MFA step (wording per method, resend, wrong / blank / expired / transient codes, Cancel during a check, password cleared, no native dialog). The library modules' contract is enforced by the `[PALI]` suite in `pryv-account-backup`. Integration verification happens against a real Pryv lab instance; the operator drives the lab smoke test.
 
 ## Dependency hygiene
 

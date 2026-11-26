@@ -10,7 +10,8 @@
   "scripts": {
     "build": "node esbuild.config.js",
     "build:watch": "node esbuild.config.js --watch",
-    "serve": "node esbuild.config.js --serve"
+    "serve": "node esbuild.config.js --serve",
+    "test": "node esbuild.config.js && node test/mfa-smoke.js"
   },
   "dependencies": {
     "buffer": "^6.0.3",
