@@ -161,9 +161,11 @@ $('sync-state-upload').addEventListener('change', async (e) => {
       throw new Error('Unrecognized file format (expected pryv-account-backup-sync-state).');
     }
     uploadedSyncState = parsed;
+    loginMessage('');
     renderStatePanel();
   } catch (err) {
-    alert('Could not read sync-state.json: ' + (err.message || err));
+    // Inline, next to the form (no native dialog).
+    loginMessage('Could not read sync-state.json: ' + (err.message || err));
     e.target.value = '';
   }
 });
@@ -191,6 +193,165 @@ const zipSlider = $('zipSizeMb');
 const zipOut = $('zipSizeMbValue');
 zipSlider.addEventListener('input', () => { zipOut.textContent = zipSlider.value; });
 
+// ─── Multi-factor (MFA) step ─────────────────────────────────────────────
+// `Service.login` throws `MfaRequiredError` for an account with MFA active
+// (`method`: 'totp' = authenticator app, 'sms' = code sent by SMS at login;
+// absent on older cores, which only offered SMS). The login form then asks
+// for the code and `Service.mfaVerify` completes the sign-in. Recovery codes
+// are not a sign-in path (on the platform they turn MFA off). The MFA token
+// and the code are never logged.
+
+const MAX_MFA_ATTEMPTS = 3;
+// { service, username, mfaToken, method, attempts } while a code is awaited.
+let pendingMfa = null;
+
+function isMfaRequired (err) {
+  return !!err && err.name === 'MfaRequiredError' && typeof err.mfaToken === 'string';
+}
+
+// 'totp', 'sms' (also when the core sends no method: older cores only had
+// SMS), or 'other' for a method this page does not know.
+function mfaKind (method) {
+  if (method === 'totp') return 'totp';
+  if (method === 'sms' || method == null) return 'sms';
+  return 'other';
+}
+
+const MFA_TEXTS = {
+  totp: {
+    intro: 'This account uses multi-factor authentication. Enter the code shown by your authenticator app.',
+    label: 'Code from your authenticator app'
+  },
+  sms: {
+    intro: 'This account uses multi-factor authentication. Enter the code we sent you by SMS.',
+    label: 'Code sent by SMS'
+  },
+  other: {
+    intro: 'This account uses multi-factor authentication. Enter your verification code.',
+    label: 'Verification code'
+  }
+};
+
+function loginMessage (text, kind) {
+  const el = $('login-message');
+  el.textContent = text || '';
+  el.className = 'login-message' + (kind === 'info' ? ' info' : '');
+  el.hidden = !text;
+}
+
+function setCredentialsLocked (locked) {
+  for (const id of ['serviceInfoUrl', 'username', 'password']) $(id).readOnly = locked;
+}
+
+function startMfaStep (service, username, err) {
+  const kind = mfaKind(err.method);
+  pendingMfa = { service, username, mfaToken: err.mfaToken, method: err.method, attempts: 0 };
+  $('mfa-intro').textContent = MFA_TEXTS[kind].intro;
+  $('mfa-label').textContent = MFA_TEXTS[kind].label;
+  $('mfa-resend').hidden = kind !== 'sms';
+  $('mfaCode').value = '';
+  $('mfaCode').required = true;
+  $('mfa-step').hidden = false;
+  $('login-submit').textContent = 'Verify code and start backup';
+  setCredentialsLocked(true);
+  $('mfaCode').focus();
+}
+
+function endMfaStep () {
+  pendingMfa = null;
+  $('mfaCode').value = '';
+  $('mfaCode').required = false;
+  $('mfa-step').hidden = true;
+  $('login-submit').textContent = 'Start backup';
+  setCredentialsLocked(false);
+}
+
+$('mfa-resend').addEventListener('click', async () => {
+  const mfa = pendingMfa;
+  if (!mfa) return;
+  const btn = $('mfa-resend');
+  btn.disabled = true;
+  try {
+    await mfa.service.mfaChallenge(mfa.username, mfa.mfaToken);
+    if (pendingMfa === mfa) loginMessage('A new code was sent by SMS.', 'info');
+  } catch (err) {
+    if (pendingMfa === mfa) loginMessage('Could not send a new code: ' + (err.message || err));
+  } finally {
+    btn.disabled = false;
+  }
+});
+
+$('mfa-cancel').addEventListener('click', () => {
+  endMfaStep();
+  loginMessage('');
+});
+
+/**
+ * Checks the multi-factor code typed for `mfa` (the pending step captured by
+ * the caller). Resolves with the connection, or with `null` when the person
+ * stays on (or goes back to) the form: wrong code, sign-in expired, a
+ * transient failure, or the step was cancelled while the check ran.
+ */
+async function verifyMfaCode (mfa) {
+  const code = $('mfaCode').value.trim();
+  if (code === '') {
+    loginMessage('Enter the code.');
+    $('mfaCode').focus();
+    return null;
+  }
+  let connection;
+  try {
+    connection = await mfa.service.mfaVerify(mfa.username, mfa.mfaToken, code);
+  } catch (err) {
+    if (pendingMfa !== mfa) return null; // cancelled meanwhile: ignore the answer
+    const id = err && err.id;
+    const message = (err && err.message) || String(err);
+    if (id === 'invalid-mfa-code') {
+      mfa.attempts++;
+      $('mfaCode').value = '';
+      if (mfa.attempts >= MAX_MFA_ATTEMPTS) {
+        endMfaStep();
+        loginMessage('The code was not accepted ' + MAX_MFA_ATTEMPTS + ' times. Sign in again.');
+      } else {
+        loginMessage('Code not accepted (' + message + '). Try again.');
+        $('mfaCode').focus();
+      }
+      return null;
+    }
+    if (id === 'invalid-access-token') {
+      // The platform ended this sign-in (expired, or too many attempts).
+      endMfaStep();
+      loginMessage('Your sign-in expired. Sign in again.');
+      return null;
+    }
+    if (!id || id === 'too-many-attempts') {
+      // Network failure or a temporary refusal: the step stays usable.
+      loginMessage('The code could not be checked (' + message + '). Try again in a moment.');
+      return null;
+    }
+    throw err;
+  }
+  if (pendingMfa !== mfa) return null; // cancelled meanwhile: do not start the backup
+  return connection;
+}
+
+/**
+ * Signs in from the login form. Resolves with the connection, or with `null`
+ * while the person still has to enter (or retype) a multi-factor code.
+ */
+async function signIn (ctx) {
+  if (pendingMfa) return await verifyMfaCode(pendingMfa);
+  const service = new pryv.Service(ctx.serviceInfoUrl);
+  await service.info();
+  try {
+    return await service.login(ctx.username, ctx.password, APP_ID);
+  } catch (err) {
+    if (!isMfaRequired(err)) throw err;
+    startMfaStep(service, ctx.username, err);
+    return null;
+  }
+}
+
 $('login-form').addEventListener('submit', async (e) => {
   e.preventDefault();
   const ctx = {
@@ -204,9 +365,28 @@ $('login-form').addEventListener('submit', async (e) => {
     includeWebhooks: $('includeWebhooks').checked,
     includeAccessHistory: $('includeAccessHistory').checked
   };
+  // While a sign-in call runs, the form's buttons are disabled (Cancel and
+  // "Send a new code" included), so the step cannot change under it.
+  const buttons = ['login-submit', 'mfa-cancel', 'mfa-resend'].map($);
+  for (const b of buttons) b.disabled = true;
+  loginMessage('');
+  let connection;
+  try {
+    connection = await signIn(ctx);
+  } catch (err) {
+    console.error(err);
+    endMfaStep();
+    fail(err.message || String(err));
+    return;
+  } finally {
+    for (const b of buttons) b.disabled = false;
+  }
+  if (!connection) return; // waiting for the multi-factor code
+  endMfaStep();
+  $('password').value = ''; // no longer needed once signed in
   show('screen-progress');
   try {
-    await runBackup(ctx);
+    await runBackup(ctx, connection);
   } catch (err) {
     console.error(err);
     fail(err.message || String(err));
@@ -218,13 +398,10 @@ $('error-reset-button').addEventListener('click', () => { location.reload(); });
 
 // ─── Orchestration ───────────────────────────────────────────────────────
 
-async function runBackup (ctx) {
+async function runBackup (ctx, connection) {
   $('progress-status').textContent = 'Connecting…';
-  const service = new pryv.Service(ctx.serviceInfoUrl);
-  await service.info();
-  const connection = await service.login(ctx.username, ctx.password, APP_ID);
   if (!connection || !connection.endpoint || !connection.token) {
-    throw new Error('Login failed — if your account has MFA enabled, please use the CLI version.');
+    throw new Error('Login failed: the platform returned no access.');
   }
 
   setupProgressUI();

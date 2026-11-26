@@ -34,6 +34,8 @@ h1 { margin: 0 0 0.25rem; font-size: 1.75rem; }
 .subtitle { margin: 0; color: var(--c-muted); }
 
 .screen.hidden { display: none; }
+/* `display` rules below (e.g. on buttons) would otherwise win over `hidden`. */
+[hidden] { display: none !important; }
 
 label {
   display: block;
@@ -209,6 +211,37 @@ label input[type="file"] {
   font: inherit;
   font-size: 0.85rem;
 }
+
+.mfa-step {
+  margin: 1rem 0;
+  padding: 0.85rem 1rem;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: var(--r);
+}
+.mfa-step p { margin: 0 0 0.5rem; font-size: 0.95rem; }
+.mfa-step .mfa-hint { margin: 0.75rem 0 0; font-size: 0.85rem; color: var(--c-muted); }
+.mfa-actions { display: flex; gap: 0.5rem; }
+.mfa-actions button {
+  width: auto;
+  margin-top: 0;
+  padding: 0.4rem 0.9rem;
+  background: #ffffff;
+  color: var(--c-fg);
+  border: 1px solid var(--c-border);
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+.mfa-actions button:hover { background: #f4f4f5; }
+.login-message {
+  margin: 0.75rem 0;
+  padding: 0.6rem 0.85rem;
+  background: #fee2e2;
+  color: var(--c-error);
+  border-radius: var(--r);
+  font-size: 0.9rem;
+}
+.login-message.info { background: #eef2ff; color: var(--c-fg); }
 
 .back-link {
   display: inline-block;
