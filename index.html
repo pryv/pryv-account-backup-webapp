@@ -32,6 +32,23 @@
           Password
           <input type="password" id="password" required autocomplete="current-password" />
         </label>
+        <div id="mfa-step" class="mfa-step" hidden>
+          <p id="mfa-intro"></p>
+          <label>
+            <span id="mfa-label">Verification code</span>
+            <input type="text" id="mfaCode" inputmode="numeric" autocomplete="one-time-code" />
+          </label>
+          <div class="mfa-actions">
+            <button type="button" id="mfa-resend" hidden>Send a new code</button>
+            <button type="button" id="mfa-cancel">Cancel</button>
+          </div>
+          <p class="mfa-hint">
+            Lost your second factor? Recovery codes are not accepted here: use the
+            recovery in your account app, which turns multi-factor authentication
+            off on the account, then sign in again.
+          </p>
+        </div>
+        <p id="login-message" class="login-message" role="alert" hidden></p>
         <label>
           Resume from a prior sync-state.json (optional)
           <input type="file" id="sync-state-upload" accept="application/json,.json" />
@@ -64,7 +81,7 @@
             Include per-access version history (O(N) calls)
           </label>
         </details>
-        <button type="submit">Start backup</button>
+        <button type="submit" id="login-submit">Start backup</button>
       </form>
     </section>
 
@@ -95,15 +112,13 @@
     <footer>
       <p>
         <strong>Operator security note:</strong> the backup contains your account
-        data including MFA recovery codes. Treat the downloaded files as
-        sensitive — transport securely; consider rotating recovery codes
-        after disclosure.
+        data, your whole account. Treat the downloaded files as
+        sensitive: transport them securely.
       </p>
       <p>
-        <strong>MFA accounts:</strong> if your account has SMS multi-factor
-        authentication enabled, use the
-        <a href="https://github.com/pryv/pryv-account-backup">CLI version</a>
-        of the backup tool — this webapp does not handle MFA challenges.
+        <strong>Multi-factor authentication:</strong> if your account has it
+        active, you are asked for the code from your authenticator app or the
+        code sent by SMS after your password.
       </p>
     </footer>
   </main>
