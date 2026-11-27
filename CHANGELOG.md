@@ -1,8 +1,6 @@
 # Changelog
 
-## Unreleased
-
-Changes made after the `v0.2.0` tag (2026-06-16).
+## 0.3.0 - 2026-11-27 - Multi-factor sign-in + hand-off parameters + library v0.8.1
 
 ### Added
 

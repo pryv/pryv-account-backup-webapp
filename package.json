@@ -1,6 +1,6 @@
 {
   "name": "pryv-account-backup-webapp",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "private": true,
   "description": "Sample browser-based Pryv account backup web app. Operator-hosted; subject logs in + downloads ZIPs. Companion to @pryv/account-backup (CLI + library).",
   "repository": {
