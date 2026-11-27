@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.3.1 - 2026-11-27 - Library v0.10.0
+
+### Changed
+
+- **`pryv-account-backup` dependency pinned to v0.10.0** (was v0.8.1). The bundled modules now
+  write an incremental run (changed events and deletions) and the audit log page by page as they
+  are read, instead of collecting every parsed event first and writing the file at the end: a
+  large incremental run or audit log no longer holds the parsed objects in memory as well. The
+  page still keeps each file's bytes until the file is complete, since the ZIPs are built in
+  memory. The files and their format are unchanged. A run that fails part-way still shows the
+  error screen, downloads no further ZIP and does not advance the incremental threshold, so the
+  next run reads the same changes again. The library's own multi-factor sign-in helper is not
+  used: the page keeps its sign-in form.
+- Requires Node 20 or later to build (`engines` was `>=18`); the `pryv` library and the backup
+  library already required Node 20.
+
 ## 0.3.0 - 2026-11-27 - Multi-factor sign-in + hand-off parameters + library v0.8.1
 
 ### Added

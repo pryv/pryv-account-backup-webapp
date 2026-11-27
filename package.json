@@ -1,6 +1,6 @@
 {
   "name": "pryv-account-backup-webapp",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "private": true,
   "description": "Sample browser-based Pryv account backup web app. Operator-hosted; subject logs in + downloads ZIPs. Companion to @pryv/account-backup (CLI + library).",
   "repository": {
@@ -17,14 +17,14 @@
     "buffer": "^6.0.3",
     "fflate": "^0.8.2",
     "pryv": "^3.20.0",
-    "pryv-account-backup": "github:pryv/pryv-account-backup#v0.8.1"
+    "pryv-account-backup": "github:pryv/pryv-account-backup#v0.10.0"
   },
   "devDependencies": {
     "backloop.dev": "git+https://github.com/perki/backloop.dev-node.git#v5.1.0",
     "esbuild": "^0.28.1"
   },
   "engines": {
-    "node": ">=18"
+    "node": ">=20"
   },
   "license": "BSD-3-Clause",
   "author": "Pryv"

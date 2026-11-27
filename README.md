@@ -39,7 +39,7 @@ Full schema: see [`docs/sync-state.md`](https://github.com/pryv/pryv-account-bac
 
 ## Deploy
 
-Prerequisites: Node 18+.
+Prerequisites: Node 20+.
 
 ```bash
 git clone https://github.com/pryv/pryv-account-backup-webapp.git

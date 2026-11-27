@@ -6,10 +6,10 @@ This repo is a **sample webapp** consumed by implementers who fork + rebrand. It
 
 A static site (HTML + CSS + JS) bundled by esbuild. Four screens: login (+ pre-login state panel) → progress → done → error. Vanilla JS — no framework. The orchestrator in `src/app.js` is ~350 LOC; the two adapters in `src/lib/` are <150 LOC each.
 
-The webapp consumes the **browser-isomorphic** per-method modules from `@pryv/account-backup` (pinned to v0.8.1; `events-pager` needs v0.8.1+):
+The webapp consumes the **browser-isomorphic** per-method modules from `@pryv/account-backup` (pinned to v0.10.0; `events-pager` needs v0.8.1+, page-by-page writes of the incremental run and the audit log v0.8.2+). The writer contract the library relies on: `openWriteStream(relPath)` returns `{ write(chunk), end(cb) }`; a file written over a whole run waits for `'drain'` only when `write()` returns `false` and listens for `'error'` only when the stream has `on()`, so `BrowserBlobZipStorageWriter` (never `false`, no `on`) needs neither. A run that fails part-way closes its open file with `"incomplete": true`, but the webapp shows the error screen and never downloads the ZIP that would hold it (ZIPs completed earlier in the run are already downloaded):
 
 - `api-resources` — generic JSON resource → writer pipeline; supports an opt-in `onParsed(doc)` tee for ref extraction
-- `events-chunked` — events with monthly chunks OR incremental `modifiedSince`; supports an `onEvents(events[])` lift wired to push attachment + series-event refs into the StateStore
+- `events-chunked` — events with monthly chunks OR incremental `modifiedSince`; supports an `onEvents(events[])` lift (one call per page on an incremental run) wired to push attachment + series-event refs into the StateStore
 - `events-pager` — `serverTime(connection)`, used for the run's timestamp (the paged reads themselves run inside `events-chunked` / `audit-as-events`)
 - `audit-as-events` — audit fetched via `events.get` on `:_audit:*` streams (the dedicated `/audit/logs` endpoint was **removed** from open-pryv.io on 2026-06-15 at commit `19d1c11f`; v0.5.0 and earlier of `pryv-account-backup` are now production-broken for the audit-log section against any deployment running that build)
 - `accesses-history` — opt-in per-access version history (in-memory accesses array)
